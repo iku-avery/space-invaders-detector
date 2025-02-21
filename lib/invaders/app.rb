@@ -77,10 +77,11 @@ module Invaders
 
     def display_results
       return puts "\nNo matches found." if @results.empty?
+      sorted_results = @results.sort_by { |result| -result[:match].similarity }
 
-      puts "\nFound #{@results.length} potential matches:"
+      puts "\nFound #{sorted_results.length} potential matches:"
 
-      @results.each_with_index do |result, index|
+      sorted_results.each_with_index do |result, index|
         puts "\nMatch #{index + 1}:"
         puts "Pattern: #{result[:pattern_index] + 1}"
         puts "Position: [#{result[:match].x}, #{result[:match].y}]"
