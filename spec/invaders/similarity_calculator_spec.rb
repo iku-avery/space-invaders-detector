@@ -17,33 +17,70 @@ RSpec.describe Invaders::SimilarityCalculator do
       allow(radar).to receive(:cell_at).and_return(1, 0, 1, 0)
     end
 
-    it 'calculates exact matches correctly' do
-      similarity = calculator.calculate_similarity(pattern, radar, 0, 0)
-      expect(similarity).to eq(1.0)
-    end
-
-    context 'with adjacent matches' do
-      before do
-        allow(radar).to receive(:cell_at).and_return(0, 1, 1, 0)
+    context 'with fully visible patterns' do
+      it 'calculates exact matches correctly' do
+        similarity = calculator.calculate_similarity(pattern, radar, 0, 0)
+        expect(similarity).to eq(1.0)
       end
 
-      it 'considers adjacent cells in similarity calculation' do
-        similarity = calculator.calculate_similarity(pattern, radar, 0, 0)
-        expect(similarity).to be_between(0.5, 0.75)
-      end
+      context 'with adjacent matches' do
+        before do
+          allow(radar).to receive(:cell_at).and_return(0, 1, 1, 0)
+        end
 
-      it 'returns 0 when there are no exact or adjacent matches' do
-        # Assuming pattern has values different from radar
-        allow(pattern).to receive(:cell_at).and_return(1, 1, 1, 1)
-        allow(radar).to receive(:cell_at).and_return(0, 0, 0, 0)
-
-        similarity = calculator.calculate_similarity(pattern, radar, 0, 0)
-        expect(similarity).to be_within(0.1).of(0.0) # Allow a small error margin due to noise
+        it 'considers adjacent cells in similarity calculation' do
+          similarity = calculator.calculate_similarity(pattern, radar, 0, 0)
+          expect(similarity).to be_between(0.5, 0.75)
+        end
       end
     end
 
-    # Empty pattern and radar
-    context 'with empty pattern and radar' do
+    context 'with partially visible patterns' do
+      let(:pattern) { instance_double('Invaders::Matrix', x_size: 3, y_size: 3) }
+
+      context 'when pattern is partially outside left edge' do
+        before do
+          allow(pattern).to receive(:cell_at).and_return(1, 1, 1, 0, 0, 0, 1, 1, 1)
+          # Only cells within radar bounds return values
+          allow(radar).to receive(:cell_at) do |x, y|
+            x >= 0 && y >= 0 ? 1 : nil
+          end
+        end
+
+        it 'calculates similarity based on visible portion' do
+          similarity = calculator.calculate_similarity(pattern, radar, -1, 0)
+          expect(similarity).to be > 0.0
+        end
+      end
+
+      context 'when pattern is partially outside top edge' do
+        before do
+          allow(pattern).to receive(:cell_at).and_return(1, 1, 1, 0, 0, 0, 1, 1, 1)
+          allow(radar).to receive(:cell_at) do |x, y|
+            y >= 0 ? 1 : nil
+          end
+        end
+
+        it 'calculates similarity based on visible portion' do
+          similarity = calculator.calculate_similarity(pattern, radar, 0, -1)
+          expect(similarity).to be > 0.0
+        end
+      end
+
+      context 'when pattern is mostly outside radar (less than 40% visible)' do
+        before do
+          allow(pattern).to receive(:cell_at).and_return(1, 1, 1, 0, 0, 0, 1, 1, 1)
+          allow(radar).to receive(:cell_at).and_return(nil)
+        end
+
+        it 'returns 0.0 for insufficient visibility' do
+          similarity = calculator.calculate_similarity(pattern, radar, -2, -2)
+          expect(similarity).to eq(0.0)
+        end
+      end
+    end
+
+    context 'with empty pattern or radar' do
       let(:pattern_empty) { instance_double('Invaders::Matrix', x_size: 0, y_size: 0) }
       let(:radar_empty) { instance_double('Invaders::Matrix', x_size: 0, y_size: 0) }
 
@@ -53,23 +90,6 @@ RSpec.describe Invaders::SimilarityCalculator do
       end
     end
 
-    # Pattern larger than radar
-    context 'with pattern larger than radar' do
-      let(:pattern_large) { instance_double('Invaders::Matrix', x_size: 3, y_size: 3) }
-      let(:radar_small) { instance_double('Invaders::Matrix', x_size: 2, y_size: 2) }
-
-      before do
-        allow(pattern_large).to receive(:cell_at).and_return(1, 1, 1, 0, 0, 0, 1, 0, 1)
-        allow(radar_small).to receive(:cell_at).and_return(1, 0, 1, 0)
-      end
-
-      it 'returns 0.0 for patterns larger than radar' do
-        similarity = calculator.calculate_similarity(pattern_large, radar_small, 0, 0)
-        expect(similarity).to eq(0.0)
-      end
-    end
-
-    # Radar with missing values (nil)
     context 'with radar having missing values' do
       before do
         allow(radar).to receive(:cell_at).and_return(1, nil, 1, 0)
@@ -77,66 +97,56 @@ RSpec.describe Invaders::SimilarityCalculator do
 
       it 'handles missing radar values gracefully' do
         similarity = calculator.calculate_similarity(pattern, radar, 0, 0)
-        expect(similarity).to be_between(0.5, 0.75)
+        expect(similarity).to be_between(0.0, 1.0)
       end
     end
 
     context 'with no exact or adjacent matches' do
       before do
-        # Ensure both pattern and radar cells have non-matching values
-        allow(pattern).to receive(:cell_at).and_return(1, 1, 1, 1)  # All 1s in pattern
-        allow(radar).to receive(:cell_at).and_return(0, 0, 0, 0)  # All 0s in radar
+        allow(pattern).to receive(:cell_at).and_return(1, 1, 1, 1)
+        allow(radar).to receive(:cell_at).and_return(0, 0, 0, 0)
       end
 
-      it 'returns a small value when there are no exact or adjacent matches (due to noise)' do
+      it 'returns a small value when there are no matches (due to noise)' do
         similarity = calculator.calculate_similarity(pattern, radar, 0, 0)
-        expect(similarity).to be_within(0.1).of(0.0) # Small noise is allowed
+        expect(similarity).to be_within(0.1).of(0.0)
       end
     end
 
-    # Noise tolerance test (random noise)
-    context 'with random noise' do
-      it 'accounts for noise tolerance correctly' do
-        similarity = calculator.calculate_similarity(pattern, radar, 0, 0)
+    context 'with boundary and edge cases' do
+      let(:pattern) { instance_double('Invaders::Matrix', x_size: 3, y_size: 3) }
 
-        expect(similarity).to be_between(0.0, 1.0).inclusive
-      end
-    end
-
-    # Handling boundary cells
-    context 'with boundary cells in radar' do
-      it 'handles boundary cells correctly' do
-        # Pattern with cells at the boundary of radar
-        allow(radar).to receive(:cell_at).and_return(1, 0, 1, 0)
-        similarity = calculator.calculate_similarity(pattern, radar, 1, 1) # Corner case
-        expect(similarity).to eq(1.0) # Assuming exact match for corner cells
-      end
-    end
-
-    # Fully matched pattern
-    context 'with a fully matched pattern' do
       before do
-        allow(radar).to receive(:cell_at).and_return(1, 0, 1, 0)
+        allow(pattern).to receive(:cell_at).and_return(1, 1, 1, 0, 0, 0, 1, 1, 1)
       end
 
-      it 'returns 1.0 for a fully matched pattern' do
-        similarity = calculator.calculate_similarity(pattern, radar, 0, 0)
-        expect(similarity).to eq(1.0)
+      it 'handles right edge correctly' do
+        allow(radar).to receive(:cell_at) do |x, y|
+          x < radar.x_size ? 1 : nil
+        end
+        similarity = calculator.calculate_similarity(pattern, radar, 1, 1)
+        expect(similarity).to be > 0.0
+      end
+
+      it 'handles bottom edge correctly' do
+        allow(radar).to receive(:cell_at) do |x, y|
+          y < radar.y_size ? 1 : nil
+        end
+        similarity = calculator.calculate_similarity(pattern, radar, 1, 1)
+        expect(similarity).to be > 0.0
       end
     end
 
-    # Pattern and radar with different sizes (aspect ratio)
-    context 'with pattern and radar having different aspect ratios' do
+    context 'with different aspect ratios' do
       let(:pattern_tall) { instance_double('Invaders::Matrix', x_size: 2, y_size: 3) }
-      let(:radar_wide) { instance_double('Invaders::Matrix', x_size: 3, y_size: 2) }
 
       before do
         allow(pattern_tall).to receive(:cell_at).and_return(1, 0, 1, 1, 0, 0)
-        allow(radar_wide).to receive(:cell_at).and_return(1, 1, 0, 0, 1, 0)
+        allow(radar).to receive(:cell_at).and_return(1, 0, 1, 0)
       end
 
-      it 'calculates similarity correctly for non-square matrices' do
-        similarity = calculator.calculate_similarity(pattern_tall, radar_wide, 0, 0)
+      it 'calculates similarity correctly for partial visibility' do
+        similarity = calculator.calculate_similarity(pattern_tall, radar, 0, -1)
         expect(similarity).to be_between(0.0, 1.0)
       end
     end

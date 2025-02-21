@@ -7,19 +7,23 @@ module Invaders
     end
 
     def calculate_similarity(pattern, radar, start_x, start_y)
-      # Return 0.0 if either the pattern or radar is empty or if pattern is larger than radar
       return 0.0 if pattern.x_size == 0 || pattern.y_size == 0 || radar.x_size == 0 || radar.y_size == 0
-      return 0.0 if pattern.x_size > radar.x_size || pattern.y_size > radar.y_size
 
       total_score = 0.0
-      max_possible_score = pattern.x_size * pattern.y_size
+      visible_cells = 0
 
       # Iterate over every cell in the pattern
       pattern.x_size.times do |x|
         pattern.y_size.times do |y|
-          pattern_value = pattern.cell_at(x, y)
           radar_x = start_x + x
           radar_y = start_y + y
+
+          # Skip cells that are outside the radar's bounds
+          next unless radar_x.between?(0, radar.x_size - 1) &&
+                    radar_y.between?(0, radar.y_size - 1)
+
+          visible_cells += 1
+          pattern_value = pattern.cell_at(x, y)
 
           # Calculate the score for this particular cell
           cell_score = calculate_cell_score(
@@ -29,11 +33,18 @@ module Invaders
             radar_y
           )
 
-          total_score += cell_score # Accumulate the score for the pattern
+          total_score += cell_score
         end
       end
 
-      total_score / max_possible_score
+      # Calculate minimum required visible cells (40% can be hidden)
+      min_visible_cells = (pattern.x_size * pattern.y_size * 0.4).ceil
+
+      # Return 0.0 if we don't have enough visible cells
+      return 0.0 if visible_cells < min_visible_cells
+
+      # Calculate similarity based only on visible cells
+      total_score / visible_cells
     end
 
     private
@@ -56,14 +67,12 @@ module Invaders
 
       # Only apply noise if there are no exact or adjacent matches
       if !exact_match?(pattern_value, radar_value) && !adjacent_match?(pattern_value, radar, x, y)
-        # Apply a random small noise factor within the noise tolerance range
         noise = @weights[:noise]
         noise_factor = rand * noise
         return noise * noise_factor
       end
 
-      # No match found, return 0.0 score
-      return 0.0
+      0.0
     end
 
     def exact_match?(pattern_value, radar_value)
@@ -71,20 +80,19 @@ module Invaders
     end
 
     def adjacent_match?(pattern_value, radar, x, y)
-      # Check all adjacent cells (including diagonals)
       [-1, 0, 1].each do |dx|
         [-1, 0, 1].each do |dy|
-          next if dx.zero? && dy.zero? # Skip the cell itself, we're looking for adjacent cells
+          next if dx.zero? && dy.zero?
+
+          next unless (x + dx).between?(0, radar.x_size - 1) &&
+                    (y + dy).between?(0, radar.y_size - 1)
 
           adjacent_value = radar.cell_at(x + dx, y + dy)
           return true if adjacent_value == pattern_value
         end
       end
-      false # No adjacent match found
-    end
-
-    def random_noise?
-      rand <= @noise_tolerance # Check if random noise occurs within the noise tolerance
+      false
     end
   end
 end
+
