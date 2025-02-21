@@ -1,24 +1,17 @@
 # frozen_string_literal: true
 require_relative 'matcher_result'
+require_relative 'matcher_config'
 
 module Invaders
   class Matcher
-    MATCH_THRESHOLD = 0.8
-    DEFAULT_WEIGHTS = {
-      exact: 1.0,    # Exact cell match
-      adjacent: 0.2, # Match in adjacent cell
-      noise: 0.2     # Small random noise threshold
-    }.freeze
-
     def initialize(
       similarity_calculator: nil,
-      match_threshold: MATCH_THRESHOLD,
-      weights: DEFAULT_WEIGHTS
+      config: Invaders::MatcherConfig.new
     )
-      @match_threshold = match_threshold
+      @config = config
       @similarity_calculator = similarity_calculator ||
         Invaders::SimilarityCalculator.new(
-          weights: weights
+          weights: config.weights
         )
     end
 
@@ -31,7 +24,7 @@ module Invaders
           similarity = @similarity_calculator.calculate_similarity(
             pattern, radar, x, y
           )
-          if similarity >= @match_threshold
+          if similarity >= @config.match_threshold
             matches << Invaders::MatcherResult.new(x: x, y: y, similarity: similarity)
           end
         end
