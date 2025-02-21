@@ -19,8 +19,18 @@ module Invaders
       validate_inputs!(pattern, radar)
       matches = []
 
-      (0..radar.y_size - pattern.y_size).each do |y|
-        (0..radar.x_size - pattern.x_size).each do |x|
+      # Calculate the minimum visible portion required (40% can be hidden)
+      min_visible_x = (pattern.x_size * 0.4).ceil
+      min_visible_y = (pattern.y_size * 0.4).ceil
+
+      # Extend search range to include partial patterns at edges
+      x_range_start = -(pattern.x_size - min_visible_x)
+      x_range_end = radar.x_size - min_visible_x
+      y_range_start = -(pattern.y_size - min_visible_y)
+      y_range_end = radar.y_size - min_visible_y
+
+      (y_range_start..y_range_end).each do |y|
+        (x_range_start..x_range_end).each do |x|
           similarity = @similarity_calculator.calculate_similarity(
             pattern, radar, x, y
           )
@@ -38,7 +48,8 @@ module Invaders
     def validate_inputs!(pattern, radar)
       raise ArgumentError, 'Pattern cannot be nil' if pattern.nil?
       raise ArgumentError, 'Radar cannot be nil' if radar.nil?
-      raise ArgumentError, 'Pattern size exceeds radar size' if pattern.x_size > radar.x_size || pattern.y_size > radar.y_size
+
+      # Remove size validation since we now allow partial patterns
     end
   end
 end
