@@ -22,6 +22,11 @@ ruby space_invaders_scanner.rb scan -f path/to/radar_sample.txt
 
 - `--show-rotations` - to see all rotations of the invader patterns
 
+- `--match-threshold <THRESHOLD>` - to specify a custom match threshold (0.8, 0.9, 1.0)
+
+If no threshold is specified, the default value of 0.8 is used.
+1.0 is for strict matching.
+
 ### Example Usage
 
 - to scan a custom radar sample:

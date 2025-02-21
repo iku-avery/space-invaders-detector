@@ -23,6 +23,15 @@ parser = OptionParser.new do |opts|
   opts.on("--include-rotations", "Include rotations of invader patterns") do
     options[:include_rotations] = true
   end
+
+  # Restrict match threshold to three specific values: 0.8, 0.9, 1.0
+  opts.on("--match-threshold THRESHOLD", "Set the match threshold (0.8, 0.9, 1.0)") do |threshold|
+    threshold = threshold.to_f
+    unless [0.8, 0.9, 1.0].include?(threshold)
+      raise OptionParser::InvalidArgument, "Invalid threshold value. Choose from 0.8, 0.9, or 1.0."
+    end
+    options[:match_threshold] = threshold
+  end
 end
 
 parser.parse!
@@ -32,8 +41,12 @@ command = ARGV.shift
 if command == "scan"
   file_path = options[:file_path] || 'data/radar_sample.txt'
   include_rotations = options[:include_rotations]
+  match_threshold = options[:match_threshold] || 0.8  # Default to 0.8 if no value is provided
 
-  Invaders::App.new.scan(file_path, include_rotations)
+  # Pass the match_threshold only if it's specified, else use default config
+  config = Invaders::MatcherConfig.new(match_threshold: match_threshold)
+
+  Invaders::App.new(matcher: Invaders::Matcher.new(config: config)).scan(file_path, include_rotations)
 else
   puts "Unknown command! Use: ruby space_invaders_scanner.rb scan [options]"
 end

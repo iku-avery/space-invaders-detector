@@ -6,10 +6,13 @@ RSpec.describe Invaders::Matcher do
   let(:radar) { instance_double('Invaders::Matrix', x_size: 3, y_size: 3) }
   let(:similarity_calculator) { instance_double('Invaders::SimilarityCalculator') }
 
+  # Default MatcherConfig with match_threshold set to 0.8
+  let(:matcher_config) { instance_double('Invaders::MatcherConfig', match_threshold: 0.8) }
+
   subject(:matcher) do
     described_class.new(
       similarity_calculator: similarity_calculator,
-      match_threshold: 0.8
+      config: matcher_config
     )
   end
 
