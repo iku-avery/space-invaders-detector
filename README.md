@@ -36,10 +36,10 @@ ruby space_invaders_scanner.rb scan -f path/to/radar_sample.txt
     ruby space_invaders_scanner.rb scan
 ```
 
-By default, only the base invader patterns are displayed. If you want to see all rotations of the invader patterns, use the `--show-rotations` flag:
+By default, only the base invader patterns are included. If you want to match invaders by all rotations of the invader patterns, use the `--include-rotations` flag:
 
 ```shell
-    ruby space_invaders_scanner.rb scan --show-rotations
+    ruby space_invaders_scanner.rb scan --include-rotations
 ```
 
 ---

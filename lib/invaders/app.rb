@@ -7,20 +7,25 @@ module Invaders
       'data/invaders/invader_02.txt'
   ].freeze
 
-    def scan(file_path, show_rotations)
+    def initialize(matcher: nil)
+      @matcher = matcher || Invaders::Matcher.new
+      @results  = []
+    end
+
+    def scan(file_path, include_rotations)
       @file_path = file_path
+      @include_rotations = include_rotations
 
       puts "Scan #{@file_path}...\n\n"
 
-      load_radar
+      radar = load_radar
 
       patterns = load_patterns
 
-      if show_rotations
-        display_rotations(patterns)
-      else
-        display_basic_patterns(patterns)
-      end
+      display_basic_patterns(patterns)
+
+      find_pattern_matches(patterns, radar)
+      display_results
     end
 
     def parser
@@ -48,19 +53,49 @@ module Invaders
       pattern_library
     end
 
+    def find_pattern_matches(pattern_library, radar)
+      @results.clear
+
+      patterns_to_check = if include_rotations?
+        pattern_library.all_rotations
+      else
+        pattern_library.base_patterns
+      end
+
+      patterns_to_check.each_with_index do |pattern, pattern_index|
+        matches = @matcher.find_matches(pattern, radar)
+
+        matches.each do |match|
+          @results << {
+            pattern_index: pattern_index,
+            match: match,
+            rotated: include_rotations?
+          }
+        end
+      end
+    end
+
+    def display_results
+      return puts "\nNo matches found." if @results.empty?
+
+      puts "\nFound #{@results.length} potential matches:"
+
+      @results.each_with_index do |result, index|
+        puts "\nMatch #{index + 1}:"
+        puts "Pattern: #{result[:pattern_index] + 1}"
+        puts "Position: [#{result[:match].x}, #{result[:match].y}]"
+        puts "Similarity: #{(result[:match].similarity * 100).round(2)}%"
+      end
+    end
+
+    def include_rotations?
+      @include_rotations
+    end
+
     def display_basic_patterns(pattern_library)
       puts "Loaded invader patterns:\n\n"
       pattern_library.base_patterns.each_with_index do |pattern_matrix, index|
         puts "Pattern #{index + 1}:"
-        pattern_matrix.display
-        puts "\n"
-      end
-    end
-
-    def display_rotations(pattern_library)
-      puts "Loaded invader patterns (including rotations):\n\n"
-      pattern_library.all_rotations.each_with_index do |pattern_matrix, index|
-        puts "Rotation #{index + 1}:"
         pattern_matrix.display
         puts "\n"
       end

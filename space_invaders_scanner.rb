@@ -6,6 +6,9 @@ require_relative 'lib/invaders/parser'
 require_relative 'lib/invaders/matrix'
 require_relative 'lib/invaders/pattern'
 require_relative 'lib/invaders/pattern_library'
+require_relative 'lib/invaders/similarity_calculator'
+require_relative 'lib/invaders/matcher'
+require_relative 'lib/invaders/matcher_result'
 
 require 'optparse'
 
@@ -17,8 +20,8 @@ parser = OptionParser.new do |opts|
     options[:file_path] = file
   end
 
-  opts.on("--show-rotations", "Display all rotations of invader patterns") do
-    options[:show_rotations] = true
+  opts.on("--include-rotations", "Include rotations of invader patterns") do
+    options[:include_rotations] = true
   end
 end
 
@@ -28,9 +31,9 @@ command = ARGV.shift
 
 if command == "scan"
   file_path = options[:file_path] || 'data/radar_sample.txt'
-  show_rotations = options[:show_rotations]
+  include_rotations = options[:include_rotations]
 
-  Invaders::App.new.scan(file_path, show_rotations)
+  Invaders::App.new.scan(file_path, include_rotations)
 else
   puts "Unknown command! Use: ruby space_invaders_scanner.rb scan [options]"
 end
