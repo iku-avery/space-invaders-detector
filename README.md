@@ -65,3 +65,11 @@ Execute the following command to run the tests:
     shell
     bundle exec rspec spec
 ```
+
+#### Future Improvements
+
+In the next steps, I plan to optimize the matcher for better performance and scalability. Potential improvements include:
+
+- Matcher Optimization: Implementing caching mechanisms to reduce redundant calculations and speed up the matching process.
+- Algorithm selection: Tailoring the matching algorithm based on the size and complexity of the dataset, to ensure efficient processing under various conditions.
+- Edge case handling: Addressing additional edge cases, such as mirrored invaders or other patterns that might be reflected, ensuring that the matcher is robust and adaptable to different scenarios.
